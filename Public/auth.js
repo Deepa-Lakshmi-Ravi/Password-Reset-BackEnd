@@ -10,8 +10,8 @@ const hashCompare = async (password, hash) => {
   return await bcrypt.compare(password, hash);
 };
 
-const createToken = async (payload) => {
-  const token = await JWT.sign(payload, process.env.JWT_SECRET_KEY, {
+const createToken =  (payload) => {
+  const token =  JWT.sign(payload, process.env.JWT_SECRET_KEY, {
     expiresIn: process.env.JWT_EXPIRES,
   });
   return token;

@@ -80,7 +80,7 @@ const forgetPassword = async (req, res) => {
 
       console.log(expitationTimeStamp);
 
-      const resetLink = "";
+      const resetLink = `${process.env.RESET_URL}/${randomString}/${expitationTimeStamp}`;
 
       const transporter = nodeMailer.createTransport({
         service: "gmail",

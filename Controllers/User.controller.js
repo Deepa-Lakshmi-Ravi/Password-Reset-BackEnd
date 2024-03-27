@@ -67,20 +67,18 @@ const Signin = async (req, res) => {
 };
 
 const forgetPassword = async (req, res) => {
-  const { email } = req.body;
   try {
-    let user = await userModel.findOne({ email });
+    let user = await userModel.findOne({ email: req.body.email });
     if (user) {
-      let randomString = randomstring.generate({
+      const randomString = randomstring.generate({
         length: 10,
         charset: "alphanumeric",
       });
+      const expirationTimestamp = Date.now() + 2 * 60 * 1000;
 
-      const expitationTimeStamp = Date.now() + 2 * 60 * 1000;
+      console.log(expirationTimestamp);
 
-      console.log(expitationTimeStamp);
-
-      const resetLink = `${process.env.RESET_URL}/${randomString}/${expitationTimeStamp}`;
+      const resetLink = `${process.env.RESET_URL}/reset-password/${randomString}/${expirationTimestamp}`;
 
       const transporter = nodeMailer.createTransport({
         service: "gmail",
@@ -89,57 +87,51 @@ const forgetPassword = async (req, res) => {
           pass: process.env.EMAIL_PASSWORD,
         },
       });
+
       const mailOptions = {
         from: process.env.EMAIL_ID,
         to: user.email,
         subject: "Password Reset Link",
         html: `
-               <p>Dear ${user.firstName} , </p>
-               <p>Sorry to hear you’re having trouble logging into your account. We got a message that you forgot your password. If this was you, you can get right back into your account or reset your password now. </p>
-                      <p> Click the following Link to reset your password \n ${resetLink} </p>
-      
-                      <p>If you didn’t request a login link or a password reset, you can ignore this message. </P>
-      
-                      <p> Only people who know your account password or click the login link in this email can log into your account. </P>`,
+            <p> Dear ${user.userName} , </p>
+            
+            <p>Sorry to hear you are having trouble logging into your account. We received a request to reset your password. If this was you, you can reset your password by clicking the following link:</p>
+            <p><a href="${resetLink}">${resetLink}</a></p>
+            <p>If you did not request a password reset, please ignore this message. Only people who know your account password or click the login link in this email can access your account.</p>
+            `,
       };
-
-      transporter.sendMail(mailOptions, (error, info) => {
+      transporter.sendMail(mailOptions, async (error, info) => {
         if (error) {
-          console.error(error);
-          res
-            .status(500)
-            .json({ message: "Failed to send the password reset mail" });
+          console.log(error);
+          res.status(500).send({
+            message: "Failed to send the password reset mail",
+          });
         } else {
-          console.log("password reset mail sent" + info.response);
-          res.status(200).json({
-            success: true,
-            message: "password reset mail sent successfully",
-          });
-        }
-
-        user.randomString = randomString;
-        user
-          .save()
-          .then(() => {
-            res.status(201).json({
-              message:
-                "Reset password mail sent successfully and random string updated in Database",
+          console.log("password reset email sent" + info.response);
+          try {
+            user.randomString = randomString;
+            await user.save();
+            res.status(201).send({
+              message: "Password reset email sent successfully. Random string updated in the database.",
             });
-          })
-          .catch((err) => {
+          } catch (err) {
             console.error(err);
-            res.status(500).json({ message: "Internal Server Error" });
-          });
+            res.status(500).send({
+              message: "Failed to update random string in the database",
+            });
+          }
+        }
       });
     } else {
-      res.status(404).json({
-        success: false,
+      res.status(400).send({
         message: "User not found",
       });
     }
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Internal Server Error" });
+  } catch (error) {
+    console.log(error);
+    res.status(500).send({
+      message: "Internel Server Error",
+    });
   }
 };
 

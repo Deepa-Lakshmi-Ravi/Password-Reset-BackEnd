@@ -51,7 +51,7 @@ const Signin = async (req, res) => {
 
               // Send the response with the token
               res.status(200).send({
-                  message: `User ${user.userName} is logged in successfully`,
+                  message: `User logged in successfully`,
                   token,
                   user: {
                       _id: user._id,
@@ -68,7 +68,7 @@ const Signin = async (req, res) => {
           }
       } else {
           res.status(404).send({
-              message: `User with ${req.body.email} is not found. Please sign up.`
+              message: `User not found. Please sign up.`
           });
       }
   } catch (error) {

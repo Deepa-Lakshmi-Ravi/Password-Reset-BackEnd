@@ -39,46 +39,32 @@ const Signup = async (req, res) => {
 
 const Signin = async (req, res) => {
   try {
-      let user = await userModel.findOne({ email: req.body.email });
-      if (user) {
-          let hashCompare = await auth.hashCompare(req.body.password, user.password);
-          if (hashCompare) {
-              const token = await auth.createToken({
-                  id: user._id,
-                  email: user.email,
-                  role: user.role
-              });
-
-              // Send the response with the token
-              res.status(200).send({
-                  message: `User logged in successfully`,
-                  token,
-                  user: {
-                      _id: user._id,
-                      firstName: user.firstName,
-                      lastName: user.lastName,
-                      email: user.email,
-                      role: user.role
-                  }
-              });
-          } else {
-              res.status(401).send({
-                  message: "Invalid Password"
-              });
-          }
-      } else {
-          res.status(404).send({
-              message: `User not found. Please sign up.`
-          });
-      }
+    const { email, password } = req.body;
+    const user = await userModel.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    const isPasswordValid = await auth.hashCompare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: "Invalid password" });
+    }
+    const token = await auth.createToken({
+      id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      role: user.role,
+    });
+    let userData = await userModel.findOne(
+      { email: req.body.email },
+      { _id: 0, password: 0, createdAt: 0, email: 0 }
+    );
+    res.status(200).json({ message: "Signin successful", token, userData });
   } catch (error) {
-      res.status(500).send({
-          message: "Internal Server Error",
-          error: error.message
-      });
+    console.error(error);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
-
 
 const forgetPassword = async (req, res) => {
   try {
@@ -107,7 +93,7 @@ const forgetPassword = async (req, res) => {
         to: user.email,
         subject: "Password Reset Link",
         html: `
-            <p> Dear ${user.userName} , </p>
+            <p> Dear ${user.firstName} , </p>
             
             <p>Sorry to hear you are having trouble logging into your account. We received a request to reset your password. If this was you, you can reset your password by clicking the following link:</p>
             <p><a href="${resetLink}">${resetLink}</a></p>
@@ -151,44 +137,48 @@ const forgetPassword = async (req, res) => {
 
 const resetPassword = async (req, res) => {
   try {
-    const { randomString } = req.params;
+    const { randomString, expirationTimestamp } = req.params;
 
-    const user = await userModel.findOne({ randomString: randomString });
-    if (
-      !user ||
-      user.randomString !== randomString ||
-      user.expitationTimeStamp < Date.now()
-    ) {
-      res.status(400).json({
+    const user = await userModel.findOne({ randomString });
+    if (!user) {
+      return res.status(400).send({
         message: "Invalid Random String",
       });
-    } else {
-      if (req.body.newPassword) {
-        const newPassword = await auth.hashPassword(req.body.newPassword);
-        user.password = newPassword;
-        user.randomString = null;
-        await user.save();
-
-        res.status(201).json({
-          message: "Your new password is updated",
-        });
-      } else {
-        res.status(400).json({
-          message: "Invalid password provider",
-        });
-      }
     }
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({
-      message: "Internal Server Error",
+
+    if (expirationTimestamp && parseInt(expirationTimestamp, 10) < Date.now()) {
+      return res.status(400).send({
+        message: "Expiration token has expired. Please request a new reset link.",
+      });
+    }
+
+    if (!req.body.newPassword) {
+      return res.status(400).send({
+        message: "Invalid password provided",
+      });
+    }
+
+    const newPassword = await auth.hashPassword(req.body.newPassword);
+
+    user.password = newPassword;
+    user.randomString = null;
+    await user.save();
+
+    return res.status(201).send({
+      message: "Your new password has been updated",
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({
+      message: "Internal server error",
     });
   }
 };
+
 
 module.exports = {
   Signup,
   Signin,
   forgetPassword,
   resetPassword,
-};
+}

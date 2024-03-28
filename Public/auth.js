@@ -1,3 +1,4 @@
+
 const bcrypt = require("bcrypt");
 const JWT = require("jsonwebtoken");
 
@@ -10,17 +11,12 @@ const hashCompare = async (password, hash) => {
   return await bcrypt.compare(password, hash);
 };
 
-const TOKEN = JWT.sign(
-  {
-    subscriptionId: 0,
-    role: ["user"],
-  },
-  process.env.JWT_SECRET_KEY,
-  {
-    expiresIn: 60 * 2,
-    algorithm: "HS256",
-  }
-);
+const createToken = async (payload) => {
+  const token = await JWT.sign(payload, process.env.JWT_SECRET_KEY, {
+    expiresIn: process.env.JWT_EXPIRES,
+  });
+  return token;
+};
 
 const decodeToken = async (token) => {
   try {

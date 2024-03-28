@@ -37,41 +37,34 @@ const Signup = async (req, res) => {
   }
 };
 
-const Signin = async(req,res)=>{
+const Signin = async (req, res) => {
   try {
-   let user = await userModel.findOne({email:req.body.email})
-   if(user)
-   {
-      let hashcompare = await auth.hashCompare(req.body.password,user.password)
-      if(hashcompare)
-      {
-          const user = await userModel.findOne({email:req.body.email},{password:0})
-          res.status(201).send({
-              message:" User login successfully",
-              user
-
-          })
-      }
-      else
-      {
-          res.status(404).send({
-              message:"Invalid Passward"
-          })
-      }
-   }
-   else{
-      res.status(404).send({
-          message:"User not Found "
-      })
-   }
+    const { email, password } = req.body;
+    const user = await userModel.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    const isPasswordValid = await auth.hashCompare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: "Invalid password" });
+    }
+    const token = await auth.createToken({
+      id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      role: user.role,
+    });
+    let userData = await userModel.findOne(
+      { email: req.body.email },
+      { _id: 0, password: 0, createdAt: 0, email: 0 }
+    );
+    res.status(200).json({ message: "Signin successful", token, userData });
   } catch (error) {
-      res.status(500).send({
-          message:"Internal Server Error",
-          error:error.message
-      })
+    console.error(error);
+    res.status(500).json({ message: "Internal server error" });
   }
-}
-
+};
 
 const forgetPassword = async (req, res) => {
   try {

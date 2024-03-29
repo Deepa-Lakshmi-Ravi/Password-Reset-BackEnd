@@ -96,7 +96,9 @@ const forgetPassword = async (req, res) => {
             <p> Dear ${user.firstName} , </p>
             
             <p>Sorry to hear you are having trouble logging into your account. We received a request to reset your password. If this was you, you can reset your password by clicking the following link:</p>
+
             <p><a href="${resetLink}">${resetLink}</a></p>
+            
             <p>If you did not request a password reset, please ignore this message. Only people who know your account password or click the login link in this email can access your account.</p>
             `,
       };

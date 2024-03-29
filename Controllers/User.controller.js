@@ -162,7 +162,7 @@ const resetPassword = async (req, res) => {
         user.randomString = null;
         await user.save();
 
-        return res.status(201).send({
+        return res.status(200).send({
           message: "Your new password has been updated successfully",
         });
       } else {

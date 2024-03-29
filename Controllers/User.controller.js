@@ -57,7 +57,7 @@ const Signin = async (req, res) => {
     });
     let userData = await userModel.findOne(
       { email: req.body.email },
-      { _id: 0, password: 0, createdAt: 0, email: 0 }
+      {  password: 0 }
     );
     res.status(201).json({ message: "Signin successful", token, userData });
   } catch (error) {

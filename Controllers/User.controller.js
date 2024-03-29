@@ -114,7 +114,8 @@ const forgetPassword = async (req, res) => {
             user.randomString = randomString;
             await user.save();
             res.status(201).send({
-              message: "Password reset email sent successfully. Random string updated in the database.",
+              message:
+                "Password reset email sent successfully. Random string updated in the database.",
             });
           } catch (err) {
             console.error(err);
@@ -141,34 +142,35 @@ const resetPassword = async (req, res) => {
   try {
     const { randomString, expirationTimestamp } = req.params;
 
-    const user = await userModel.findOne({ randomString });
-    if (!user) {
+    const user = await userModel.findOne({ randomString:randomString });
+    if (!user || user.randomString !== randomString) {
       return res.status(400).send({
         message: "Invalid Random String",
       });
     }
 
-    if (expirationTimestamp && parseInt(expirationTimestamp, 10) < Date.now()) {
+    if (expirationTimestamp && expirationTimestamp < Date.now()) {
       return res.status(400).send({
-        message: "Expiration token has expired. Please request a new reset link.",
+        message:
+          "Expiration token has expired. Please request a new reset link.",
       });
+    } else {
+      if (req.body.newPassword) {
+        const newPassword = await auth.hashPassword(req.body.newPassword);
+
+        user.password = newPassword;
+        user.randomString = null;
+        await user.save();
+
+        return res.status(201).send({
+          message: "Your new password has been updated",
+        });
+      } else {
+        return res.status(400).send({
+          message: "Invalid password provided",
+        });
+      }
     }
-
-    if (!req.body.newPassword) {
-      return res.status(400).send({
-        message: "Invalid password provided",
-      });
-    }
-
-    const newPassword = await auth.hashPassword(req.body.newPassword);
-
-    user.password = newPassword;
-    user.randomString = null;
-    await user.save();
-
-    return res.status(201).send({
-      message: "Your new password has been updated",
-    });
   } catch (error) {
     console.log(error);
     return res.status(500).send({
@@ -177,10 +179,9 @@ const resetPassword = async (req, res) => {
   }
 };
 
-
 module.exports = {
   Signup,
   Signin,
   forgetPassword,
   resetPassword,
-}
+};

@@ -59,7 +59,7 @@ const Signin = async (req, res) => {
       { email: req.body.email },
       { _id: 0, password: 0, createdAt: 0, email: 0 }
     );
-    res.status(200).json({ message: "Signin successful", token, userData });
+    res.status(201).json({ message: "Signin successful", token, userData });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Internal server error" });
@@ -163,7 +163,7 @@ const resetPassword = async (req, res) => {
         await user.save();
 
         return res.status(201).send({
-          message: "Your new password has been updated",
+          message: "Your new password has been updated successfully",
         });
       } else {
         return res.status(400).send({
